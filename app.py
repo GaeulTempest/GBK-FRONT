@@ -11,8 +11,8 @@ from cvzone.HandTrackingModule import HandDetector
 
 # --- Konfigurasi dan Inisialisasi ---
 # Pastikan URL ini sudah benar sesuai dengan dashboard Railway Anda
-BACKEND_URL_HTTP = "https://gbk-backend-production-a1b2.up.railway.app"  # <-- GANTI SESUAI URL ANDA
-BACKEND_URL_WS = "wss://gbk-backend-production-a1b2.up.railway.app/ws"    # <-- GANTI SESUAI URL ANDA
+BACKEND_URL_HTTP = "https://gbk-production.up.railway.app/"  # <-- GANTI SESUAI URL ANDA
+BACKEND_URL_WS = "wss://gbk-production.up.railway.app/ws"    # <-- GANTI SESUAI URL ANDA
 
 # Inisialisasi detector tangan dari CVZone
 detector = HandDetector(staticMode=False, maxHands=1, detectionCon=0.8, minTrackCon=0.5)
