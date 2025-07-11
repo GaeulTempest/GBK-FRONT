@@ -1,0 +1,7 @@
+streamlit
+opencv-python-headless
+cvzone
+streamlit-webrtc
+requests
+websockets
+numpy
