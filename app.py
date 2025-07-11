@@ -11,16 +11,24 @@ from cvzone.HandTrackingModule import HandDetector
 
 # --- Konfigurasi dan Inisialisasi ---
 
-# GANTI DENGAN URL BACKEND RAILWAY ANDA SETELAH DEPLOY
-# Contoh: "my-backend-project.up.railway.app"
-BACKEND_URL_HTTP = "https://gbk-production.up.railway.app" # Ganti ini
-BACKEND_URL_WS = "wss://gbk-production.up.railway.app/ws" # Ganti ini
+# ==============================================================================
+# PERBAIKI BAGIAN INI
+# ==============================================================================
+# GANTI URL DI BAWAH INI DENGAN URL PUBLIK DARI RAILWAY ANDA
+# Pastikan URL HTTP menggunakan "https://"
+# Pastikan URL WebSocket menggunakan "wss://" dan diakhiri dengan "/ws"
+
+# Contoh URL dari Railway: gbk-backend-production-a1b2.up.railway.app
+
+BACKEND_URL_HTTP = "https://gbk-backend-production-a1b2.up.railway.app"  # <-- GANTI INI
+BACKEND_URL_WS = "wss://gbk-backend-production-a1b2.up.railway.app/ws"    # <-- GANTI INI
+# ==============================================================================
+
 
 # Inisialisasi detector tangan dari CVZone
-# Parameter ini bisa disesuaikan untuk pengujian akurasi
 detector = HandDetector(staticMode=False, maxHands=1, detectionCon=0.8, minTrackCon=0.5)
 
-# Konfigurasi STUN server untuk WebRTC (membantu koneksi melewati firewall)
+# Konfigurasi STUN server untuk WebRTC
 RTC_CONFIGURATION = RTCConfiguration(
     {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
 )
@@ -28,10 +36,7 @@ RTC_CONFIGURATION = RTCConfiguration(
 # --- Fungsi Helper ---
 
 def classify_gesture(fingers: list) -> str:
-    """
-    Mengklasifikasikan gesture tangan berdasarkan jari yang terangkat.
-    Ini adalah adaptasi dari kode `main.py` lama Anda.
-    """
+    """Mengklasifikasikan gesture tangan berdasarkan jari yang terangkat."""
     if fingers == [0, 0, 0, 0, 0]:
         return "rock"
     if fingers == [1, 1, 1, 1, 1]:
@@ -48,32 +53,20 @@ class VideoProcessor:
         self.last_detection_time = 0
 
     def recv(self, frame: av.VideoFrame) -> av.VideoFrame:
-        """
-        Fungsi ini dipanggil untuk setiap frame dari webcam.
-        """
+        """Fungsi ini dipanggil untuk setiap frame dari webcam."""
         img = frame.to_ndarray(format="bgr24")
-        
-        # Mulai timer untuk mengukur latency deteksi
         start_time = time.time()
-
-        # Deteksi tangan pada gambar
         hands, img_processed = detector.findHands(img)
-        
-        # Hitung latency deteksi
-        detection_latency = (time.time() - start_time) * 1000 # dalam ms
+        detection_latency = (time.time() - start_time) * 1000
         st.session_state['detection_latency'] = f"{detection_latency:.2f} ms"
 
         if hands:
             hand = hands[0]
             fingers = detector.fingersUp(hand)
             gesture = classify_gesture(fingers)
-            
-            # Simpan gesture yang terdeteksi ke session state
             if gesture != "none":
                 st.session_state['detected_gesture'] = gesture
                 self.last_gesture = gesture
-
-            # Tampilkan gesture yang terdeteksi pada video
             cv2.putText(img_processed, self.last_gesture, (hand['bbox'][0], hand['bbox'][1] - 20),
                         cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 255), 2)
         
@@ -84,7 +77,6 @@ class VideoProcessor:
 st.set_page_config(page_title="Gunting Batu Kertas Online", layout="centered")
 st.title("🎮 Gunting Batu Kertas Online")
 
-# Inisialisasi session state jika belum ada
 if 'player_id' not in st.session_state:
     st.session_state['player_id'] = str(uuid.uuid4())
 if 'room_id' not in st.session_state:
@@ -96,39 +88,37 @@ if 'detected_gesture' not in st.session_state:
 if 'game_result' not in st.session_state:
     st.session_state['game_result'] = None
 
-# Tampilan Lobby: Create atau Join Room
 if not st.session_state['room_id']:
     st.header("Lobby Permainan")
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Buat Room Baru", use_container_width=True):
             try:
+                # Permintaan untuk membuat room baru ke backend
                 response = requests.post(f"{BACKEND_URL_HTTP}/create_room")
                 if response.status_code == 200:
                     room_id = response.json()['room_id']
                     st.session_state['room_id'] = room_id
                     st.rerun()
                 else:
-                    st.error("Gagal membuat room. Server mungkin tidak aktif.")
+                    st.error(f"Gagal membuat room. Status: {response.status_code}")
             except requests.exceptions.RequestException as e:
-                st.error(f"Tidak dapat terhubung ke server: {e}")
+                st.error("Gagal membuat room. Server mungkin tidak aktif atau URL salah.")
+                st.error(f"Detail: {e}")
 
     with col2:
         join_room_id = st.text_input("Masukkan Room ID untuk Bergabung", key="join_id")
         if st.button("Gabung Room", use_container_width=True):
             if join_room_id:
-                # Anda bisa menambahkan validasi ke backend di sini
                 st.session_state['room_id'] = join_room_id
                 st.rerun()
             else:
                 st.warning("Harap masukkan Room ID.")
 
-# Tampilan Ruang Permainan
 else:
     st.header(f"Room: `{st.session_state['room_id']}`")
     st.write(f"ID Anda: `{st.session_state['player_id']}`")
     
-    # Komponen WebRTC untuk menampilkan video
     webrtc_ctx = webrtc_streamer(
         key="game-stream",
         mode=WebRtcMode.SENDRECV,
@@ -138,11 +128,9 @@ else:
         async_processing=True,
     )
 
-    # Menampilkan status deteksi
     st.info(f"Gesture Terdeteksi: **{st.session_state.get('detected_gesture', 'none').upper()}**")
     st.caption(f"Latency Deteksi: {st.session_state.get('detection_latency', '0 ms')}")
 
-    # Tombol untuk mengirim gerakan
     if st.button("Kunci Gerakan!", use_container_width=True, type="primary"):
         gesture = st.session_state.get('detected_gesture', 'none')
         if gesture != "none" and webrtc_ctx.state.playing:
@@ -151,29 +139,23 @@ else:
                 uri = f"{BACKEND_URL_WS}/{st.session_state['room_id']}/{st.session_state['player_id']}"
                 try:
                     async with websockets.connect(uri) as websocket:
-                        # Kirim gerakan ke server
                         move_data = json.dumps({"type": "move", "move": gesture})
                         await websocket.send(move_data)
                         st.toast(f"Gerakan '{gesture}' terkirim!")
-
-                        # Tunggu hasil dari server
-                        # Ini adalah loop untuk mendengarkan pesan dari server
                         while True:
                             response = await websocket.recv()
                             message = json.loads(response)
                             if message.get("type") == "result":
                                 st.session_state['game_result'] = message
-                                break # Keluar dari loop setelah dapat hasil
+                                break
                 except Exception as e:
                     st.error(f"Koneksi WebSocket gagal: {e}")
 
-            # Jalankan fungsi async
             asyncio.run(send_and_receive())
             st.rerun()
         else:
             st.warning("Tidak ada gesture yang valid terdeteksi atau kamera tidak aktif.")
 
-    # Menampilkan hasil permainan
     if st.session_state['game_result']:
         result = st.session_state['game_result']
         winner = result.get('winner')
@@ -187,7 +169,6 @@ else:
         else:
             st.error("🤖 Anda Kalah! 🤖")
         
-        # Tampilkan gerakan kedua pemain
         for pid, move in moves.items():
             player_label = "Anda" if pid == st.session_state['player_id'] else "Lawan"
             st.write(f"Gerakan {player_label}: **{move.upper()}**")
