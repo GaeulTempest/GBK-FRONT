@@ -12,8 +12,8 @@ import websockets
 
 # --- Konfigurasi dan Inisialisasi ---
 # Pastikan URL ini sudah benar sesuai dengan dashboard Railway Anda
-BACKEND_URL_HTTP = "https://gbk-backend-production-1234.up.railway.app" # <-- GANTI SESUAI URL ANDA
-BACKEND_URL_WS = "wss://gbk-backend-production-1234.up.railway.app/ws"   # <-- GANTI SESUAI URL ANDA
+BACKEND_URL_HTTP = "https://gbk-production.up.railway.app/" # <-- GANTI SESUAI URL ANDA
+BACKEND_URL_WS = "wss://https://gbk-production.up.railway.app/ws"   # <-- GANTI SESUAI URL ANDA
 
 # --- Inisialisasi Session State ---
 # Variabel untuk mengelola halaman yang ditampilkan
